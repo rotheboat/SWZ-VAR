@@ -1,0 +1,36 @@
+function [y]=vec(x)
+% PURPOSE:
+% Creates a column vector by appending the columns of a matrix to each other. 
+% 
+% FORMAT:
+% yc = vec( x); 
+%
+% INPUT:
+% x     NxK matrix. 
+% 
+% OUTPUT 
+% yc   (N*K)x1 vector, the columns of x appended to each other. 
+% 
+% REMARKS:
+% 
+% EXAMPLE: 
+% 
+%      x = [ 1 2,
+%            3 4 ];
+%      yc = vec(x);
+% 
+% x =    1.000000    2.000000 
+%        3.000000    4.000000 
+%   
+% yc =    1.000000 
+%         3.000000 
+%         2.000000 
+%         4.000000 
+%
+% Written by Dimitris Korobilis (2007-2008)
+% University of Strathclyde
+  
+y=reshape(x,size(x,1)*size(x,2),1);
+
+% or use
+% y = x(:);

@@ -1,0 +1,17 @@
+% DeleteMeClass
+
+classdef DeleteMeClass
+    
+    properties (Access=protected)
+        xval = 10;
+    end;
+    
+    methods
+    
+        function set_xval( obj, a )
+            obj.xval = a;
+        end;
+        
+    end;
+    
+end

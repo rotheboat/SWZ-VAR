@@ -1,0 +1,79 @@
+%% Impose 'soft' zero restrictions on specified banking variables in the
+% macro block of the VAR. Specify tightness with which the restrictions
+% are imposed.
+%
+% @arguments [struct] priorparams - information on the VAR prior parameters
+%            [vector] variable_index - position of variables to be excluded
+%            [scalar] tightness - larger numbers mean a tighter prior
+%
+% @author    Roland Meeks
+% @date      2013-01-23
+function s = GetExcludeBankVarFromMacroBlockPrior( priorparams, ...
+                                            prior_options, banks_index )
+
+% The return object (copy the priorparams struct)
+s = priorparams;
+
+%---------------------Get dimensions of VAR----------------------------                               
+  
+K = prior_options.K;
+M = prior_options.M;
+p = prior_options.p;                    
+
+%------------------Check if BVAR includes an intercept-----------------
+constant = 0;
+
+
+if ( K > M*p ) %( 1 == mod( K, M*p ) )
+    constant = 1;
+elseif ( K < M*p ) %( 1 < mod( K, M*p ) )
+    % throw an exception
+end;                               
+                               
+% The variables which are not in banks_index are in the macro block, by
+% definition. Get index of macro block (q):
+
+% The positions of the restricted variables (r)
+r = prior_options.soft_exclude;
+
+% The dimensions of r and q
+n_r = length( r );
+n_q = length( q );
+
+%-----------------------Set the prior A matrix-----------------------------
+A = priorparams.A_prior(constant+1:end,:);
+alpha = A(:);
+
+% See documentation for construction of this expression, which selects the
+% elements of 
+omega = kron( p*M*(q-ones(n_q,1)), ones(p*n_r,1) ) + ...
+            kron( ones(n_q,1), M*tril(ones(p,p),-1)*ones(p,1) + ...
+                kron( ones(p,1),r) );
+
+alpha( omega ) = 0;
+A = reshape( alpha, M*p, K );
+% Assign the modified prior A matrix to the struct
+s.A_prior( constant+1:end,: ) = A;
+
+
+%----------------------Set prior precision matrix V------------------------
+
+V = priorparams.V_prior;
+
+% this is a M*(constant+M*p) x M*(constant+M*p) dimensional object
+v1 = 1:M*K; % index vector for all coefficients
+    
+% V.1. Where a constant is present, get the rows corresponding only to the 
+% autoregressive coefficients
+if ( 1 == constant )
+    % drop the rows corresponding to the constant (1, 2+M*p, 3+2*M*p,...)
+    const_select = tril( ones(M,M) )*ones(M,1) + ...
+                            tril( ones(M,M), -1)*ones(M,1)*M*p;
+    v1( const_select ) = []; % drop constants
+    V = V( v1, v1 ) ;   % select only rows/cols
+end;
+
+V( omega
+
+            
+end

@@ -1,0 +1,61 @@
+% Provides a two-dimensional density plot for the multivariate-t and Normal
+% distributions. 
+function DoMVDistPlot( postmean, Pred_mean, names, index, type )
+
+% Scale/covariance of the sub-vector of variables of interest is required 
+% to plot marginal density below...
+SIGMA_sub = GetSubMatrix( postmean.SIGMA, index );
+
+% variable 1 is plotted on the x-axis; xrange is then the min/max value for
+% the x-axis based on 3 standard deviations
+xrange = 3*sqrt(SIGMA_sub(1,1));
+xstep = 2*xrange/100;
+
+% variable 2 is plotted on the y-axis:
+yrange = 3*sqrt(SIGMA_sub(2,2));
+ystep = 2*yrange/100;
+
+% the x and y values for the grid over which the density will be calculated
+xgrid = -xrange:xstep:xrange;
+ygrid = -yrange:ystep:yrange;
+
+% the call to meshgrid gives you two identically sized matrices that are
+% the x- and y-coordinates of the grid we want to plot over
+[Xgrid,Ygrid] = meshgrid(xgrid,ygrid);
+
+% plot the marginal multivariate-t pdf 
+if ( strcmp( type, 't' ) )
+    
+    % the mvt method does not allow location, only scale and df. The grid
+    % we supply to this function must, accordingly, be centered on the zero
+    % coordinate. If the diagonal elements of SIGMA_sub are not 1, mvtpdf 
+    % scales it to correlation form.
+    F = mvtpdf( [Xgrid(:), Ygrid(:)], SIGMA_sub, postmean.v_post );
+    
+    F = reshape( F, length(xgrid), length(ygrid) );
+    
+    % do the plot, with th
+    contour( xgrid+Pred_mean(index(1)), xgrid+Pred_mean(index(2)), F );
+    
+% plot the marginal multivariate-Normal pdf 
+elseif ( strcmp( type, 'N' ) )
+    
+    % the mvn method allows us to supply location, as well as scale
+    F = mvnpdf( [Pred_mean(index(1))+Xgrid(:), ... % shift the grid (which is centered on
+                    Pred_mean(index(2))+Ygrid(:)], ... % zero) to be centered on mean
+                [Pred_mean(index(1)), ... % location ...
+                    Pred_mean(index(2))], ... 
+                SIGMA_sub ); % scale
+    
+    F = reshape( F, length(xgrid), length(ygrid) );
+    
+    contour( Pred_mean(index(1))+xgrid, Pred_mean(index(2))+ygrid, F );
+    
+else
+    error( 'DoMVDistPlot: expecting type `t` or `N`.' );
+end;
+    
+% Apply some formatting to the contour plot
+xlabel(names(index(1)));
+ylabel(names(index(2)));
+colormap('copper');

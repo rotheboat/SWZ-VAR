@@ -1,0 +1,177 @@
+%% 
+% Roland Meeks (2010-11)
+%
+% Given information on independent normal-Wishart prior distributions, OLS 
+% parameter estimates, and data, uses Gibbs sampling to draw from the 
+% posterior distributions B|Sigma and Sigma|B. Returns the draws, and
+% functions of them such as impulse-responses.
+function s = GetINWishartPosterior( prior, strols, p, post_options )
+%% ====================== Initialization & Storage ========================
+
+% Data & important constants of dimension
+Y = strols.Y;
+X = strols.X;
+[ T M ] = size( Y );
+K = size( X, 2 );
+Z = kron( eye( M ), X );
+
+% Check if BVAR includes an intercept
+if ( K > M*p )
+    constant = 1;
+elseif ( K == M*p )
+    constant = 0;
+end;
+
+% coefficient matrices from prior
+a_prior = vec( prior.A_prior );
+V_prior = prior.V_prior;
+H_prior = inv( V_prior );
+
+s = struct( 'A_post', [], 'A_mean', [], 'V_post', [], 'v_post', [], ...
+    'SIGMA_post', [], 'SIGMA_mean', [], 'IRF', [], 'loglik', [] );
+
+% Initialize Bayesian posterior parameters using OLS values...
+% Note that as we first draw from the conditional for alpha, we don't need
+% to get an 'initial' alpha (if we were first drawing SIGMA, we would).
+SIGMA = strols.SIGMA_OLS*(T-K)/(T-K+1); % n.b. check df?
+
+% Can drop strols
+% clear strols;
+
+% Storage space for posterior draws
+ALPHA_draws = zeros(post_options.draws,K,M);
+V_draws = zeros(post_options.draws,M*K,M*K);
+SIGMA_draws = zeros(post_options.draws,M,M);
+loglik_draws = zeros( post_options.draws,1);
+imp = zeros( post_options.draws, M, M, post_options.irf_horizon );
+
+% Gibbs-related preliminaries
+ntot = post_options.draws + post_options.burn;  % Total number of draws
+
+%% ========================= Start Sampling ===============================
+tic;
+
+disp('Number of iterations');
+
+drawcount = 0 ;
+rejectcount = 0 ;
+flag = 1;
+
+% Gibbs sampler
+while ( drawcount < ntot+1 )
+    
+    if ( drawcount + rejectcount > post_options.max_draws )
+        warning( 'GetINWishartPosterior:GibbsLoop', ...
+            'Maximum number of draws exceeded.' );
+        % BUGBUG need to trim imp to remove zeros
+        break;
+    end;
+    
+    if ( (1 == flag) && (0 == mod(drawcount,post_options.it_print) ) )
+        disp( [ 'Iteration = ' num2str( drawcount ) ]);
+        toc;
+    end
+    
+    %% (1) The ALPHA|SIGMA block -------------------------------------------
+    VARIANCE = kron(inv(SIGMA),eye(T)); %Note that this is inconsistent
+    % with equation 2.19 in Koop and Korobilis, since they adopt a
+    % different notation for the vector of stacked observations y than the
+    % one used in the code, and in Geweke (2005, p. 164)
+    
+    % Try-catch block will pick up if V_post is non-PD; if it is not then
+    % we set the flag to zero and draw again. Most likely there is a
+    % numerical problem with inv(). Note that if a matrix is non-PD you can
+    % still get chol() to return without an error, but the resulting UT
+    % matrix will not be of the expected dimension (or of course, rank).
+    try
+        H_post = H_prior + Z'*VARIANCE*Z;
+        a_post = H_post\( (V_prior\a_prior) + Z'*VARIANCE*Y(:)); % RM replaced inv(V)*a
+        V_post = inv( H_post );
+    
+        alpha = a_post + chol( V_post, 'lower' )*randn(K*M,1); % Draw of alpha     
+        ALPHA = reshape(alpha,K,M); % Draw of ALPHA
+
+        %% (2) Reject unstable draws ... see Cogley & Sargent ("Evolving
+        % Post-WWII US Inflation Dynamics") for a formal justification of the
+        % procedure below in terms of rejection sampling where the 'full'
+        % posterior (what they call the 'virtual' posterior) density is the
+        % proposal distribution.
+
+        % The companion form of the VAR AR coefficient matrices...
+        COMP = [ ALPHA( constant+1:end, : )'; eye( M*(p-1) ), zeros( M*(p-1), M ) ];
+    
+        % Check the roots of the companion matrix, noting draws that violate
+        % stationarity condition
+        if ( (post_options.reject_nonstationary) && ...
+                                ( any( abs( eig( COMP ) ) > 1.001 ) ) )
+            flag = 0;
+            rejectcount = rejectcount+1;
+        else
+            flag = 1;
+        end;
+
+    catch err
+        if ( strcmp( err.identifier, 'MATLAB:posdef' ) )
+            flag = 0;
+        else
+            rethrow( err );
+        end; % end if-else
+    end; % end try-catch
+    
+
+    % --------------------------------------------------------------------
+    % Draws that are non-stationary are rejected, as flag above is set to
+    % zero. Just skip the draw of SIGMA, and go back to (1), where a new
+    % ALPHA is gotten.
+    
+    %% (3) Posterior of SIGMA|ALPHA,Data ~ iW(inv(S_post),v_post)
+    if ( 1 == flag )
+        v_post = T + prior.v_prior; % note: does not change on iteration
+        S_post = prior.S_prior + (Y - X*ALPHA)'*(Y - X*ALPHA);
+        SIGMA = inv(wish(inv(S_post),v_post));% Draw SIGMA
+
+        % (4) Store results for every iteration in excess of drawcount
+        if drawcount > post_options.burn               
+            % =========IMPULSE RESPONSES:
+            %Btemp = reshape( ALPHA, constant+M*p, M );
+            Btemp = ALPHA(constant+1:end,:);
+            % note: chol( SIGMA ) delivers an UT matrix, thus SIGMA=UT'*UT
+            imp_resp = impulse( reshape( Btemp', M, M, p ), ...
+                                 chol( SIGMA ), post_options.irf_horizon );
+            imp(drawcount-post_options.burn,:,:,:) = imp_resp ;
+
+            % ----- Save draws of the parameters
+            ALPHA_draws(drawcount-post_options.burn,:,:) = ALPHA;
+            V_draws(drawcount-post_options.burn,:,:) = V_post;
+            SIGMA_draws(drawcount-post_options.burn,:,:) = SIGMA;
+
+            params = { eye(M,M), ALPHA, SIGMA };
+            loglik_draws(drawcount-post_options.burn) = ...
+                    GetVarLogLikelihood( Y, X, params );
+        end % end saving results
+    end; % end if non-stationary flag is zero
+    
+    drawcount = drawcount + flag;
+end; %end the main Gibbs for loop
+
+disp( 'Done with Gibbs sampler' );
+disp( ['Rejected ' num2str( 100*rejectcount/(rejectcount+ntot) ) ...
+                                        '% of draws as non-stationary.'] )
+
+toc;
+%% ===================== End Sampling Posteriors ==========================
+SS = zeros( M );
+for j = 1:(drawcount-post_options.burn-1)
+    SS = SS + squeeze( SIGMA_draws(j,:,:) );
+end;
+
+s.A_post = ALPHA_draws;
+s.V_post = V_draws;
+s.v_post = v_post;
+s.A_mean = squeeze( mean( ALPHA_draws ) ); % BUGBUG check
+s.SIGMA_post = SIGMA_draws;
+s.SIGMA_mean = SS/(drawcount-post_options.burn);
+s.IRF = imp;
+s.loglik = loglik_draws;
+
+end

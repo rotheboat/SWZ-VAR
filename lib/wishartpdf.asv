@@ -1,0 +1,30 @@
+% Evaluates the logarithm pdf for the Wishart distribution for a given PSD 
+% matrix
+function pw = wishartpdf( W, Sigma, m )
+
+%% Perform checks on method arguments
+
+try
+    % Check matrix is square, symmetric
+    if ~all( Sigma == Sigma' )
+        error( 'wishartpdf::SigmaMatrix', 'Non-symmetric matrix passed.' );
+    end;
+catch
+    
+end;
+
+% Check if matrix is PD (TRUE if p == 0)
+[R, p] = chol( Sigma );
+
+if ~( 0 == p )
+    warning( 'wishartpdf::SigmaMatrix', 'Non-positive definite matrix passed.' );
+end;
+    
+
+%% Compute logarithm of pdf; constant of integration is c
+log_c = m*p*ln(2)/2 + m*ln(det(Sigma))/2 + p*(p-1)*ln(pi)/4 + ...
+                sum(gamma((m+1-[1:p])/2));
+
+pw = -log_c + (m-p-1)*ln( det( W ) )/2 - trace( Sigma\W )/2;
+        
+end        

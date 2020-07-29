@@ -1,0 +1,14 @@
+function DoKernelPlot( Y_pred, index )
+
+data = [Y_pred(:,i),Y_pred(:,j)];
+MAX = max(data,[],1); 
+MIN = min(data,[],1); 
+Range = MAX-MIN;
+MAX_XY = MAX+Range/4; 
+MIN_XY = MIN-Range/4;
+[bandwidth,density,Xmesh,Ymesh]=kde2d(data,2^7,MIN_XY,MAX_XY);
+%surf(Xmesh,Ymesh,density,'LineStyle','none')
+            contour( Xmesh,Ymesh,density );
+
+colormap autumn;
+
