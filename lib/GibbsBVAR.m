@@ -64,7 +64,7 @@ function postest = GibbsBVAR( mY, mX, prior, options)
 postest = struct('A_post',[],'F_post',[],'SIGMA_post',[],'B_post',[],...
     'cH',[],'cP',[],'cS_inv',[],'cT',[],...
     'Tobs',[],'Tstar',[],...
-    'IRF',[],'loglik',[],'is_restricted',false,'reject_count',0);
+    'IRF',[],'loglik',[],'reject_count',0);
 
 % Set up basic information about the VAR and check if a exogenous variables 
 % are present 
@@ -488,9 +488,12 @@ while drawcount <= number_independent_chains*options.draws
     for k = 1:M
         % Conditional on the draw for b(i) we can draw g(i) as per WZ (13)
         % Draw g(i)|b(i) ~ normal (WZ 13)
+        % Note that making use of the Cholesky factor can avoid numerical
+        % issues with cH not registering as positive definite in mvnpdf
         mHsqrt = chol( cH{k} );
-        %vg = cP{k}*cb{k} + mHsqrt*randn( size(cV{k},2), 1 );
-        vg = mvnrnd( cP{k}*cb{k}, cH{k} )';
+        % An older version of the code used an incorrect implementation of
+        % randn at this line:
+        vg = mvnrnd( cP{k}*cb{k}, mHsqrt'*mHsqrt )';
         % store vector of b coefficients in a cell array
         cg{k} = vg;
         % transform g vector to f vector using f(i) = V(i)g(i)

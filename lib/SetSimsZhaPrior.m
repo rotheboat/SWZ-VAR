@@ -7,6 +7,12 @@ function [ priorparams, options ] = SetSimsZhaPrior( mY, mX, prior_name, varargi
 % where x(t)' = [ 1', y(t-1)',...,y(t-p)' ].  Notation follows Waggoner and 
 % Zha (JEDC 2003).
 %
+% Where restrictions are present, the code proceeds as
+% 
+%   GetNamedPrior -> SetRestrictions -> GetDerivedPriorUnderRestrictions
+%
+% 
+%
 % @author: Roland Meeks
 %
 % A vector of hyperparameters can be passed using options.lambda, with
@@ -30,6 +36,9 @@ function [ priorparams, options ] = SetSimsZhaPrior( mY, mX, prior_name, varargi
 % M equations of the VAR, with N typically a small number. Where a single
 % exogenous variable appears at various lags, I do not apply shrinkage to
 % the lag coefficients.
+%
+% @update: July, 2020
+%   
 %
     % init: create an empty options struct.  This object is returned by the
     % function
@@ -520,19 +529,56 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
     mycell = cell(1,M); 
     cV = cellfun(@(n)eye(K,K),mycell,'UniformOutput', false);
 
-
-    % if there is a 'restrictions' field
+    % Check if any restrictions are present (if not the defaults are used).
+    % There can never be "no restrictions".
     if isfield( options, 'restrictions' )
-        
-        % check if restrictions are empty
-        postest.is_restricted = ...
-                    ~all(cellfun( @(n)isempty(n), options.restrictions, ...
-                        'UniformOutput', true ));    
-                    
-        if postest.is_restricted
-            [cU, cV] = processZeroRestrictions( options.restrictions, M, K, cU, cV );
-            fprintf( '\nApplying parameter restrictions...' );
+        % ** Zero restrictions
+        % if there is a 'zero_restrictions' field, it should contain a cell
+        % array
+        if isfield( options.restrictions, 'zero_restrictions' )
+
+            % check if the cell array of restrictions are completely empty.
+            % It is expected behavior if one is empty and the other is not
+            % (so restrictions apply only contemporaneously, or only at
+            % lags and/or on exogenous variables).
+            priorparams.is_restricted = ...
+                        ~all( ...
+                            cellfun( @(n)isempty(n), ...
+                                options.restrictions.zero_restrictions, ...
+                                    'UniformOutput', true ) ...
+                            );
+
+            % If there are some zero restrictions, process them
+            if priorparams.is_restricted
+                
+                [cU, cV] = processZeroRestrictions( ...
+                            options.restrictions.zero_restrictions, ...
+                                M, K, cU, cV );
+                
+                % Signal that restrictions are present
+                fprintf( '\nApplying parameter restrictions...' );
+
+            end
+        end
+
+        % ** General restrictions
+        % Where general linear restrictions are to be imposed, these are
+        % already passed in the options struct:
+        %   options.restrictions.linear_restrictions
+        % However they must be validated here
+        if isfield( options.restrictions, 'linear_restrictions' )
             
+            % For each equation, retrieve the Q matrix from the options
+            % structure, and store the nullity of Q in U. We expect Q to be
+            % a 3-D numerical array, with the third dimension corresponing
+            % to equation numbers with ordering exactly as in
+            % options.names; same comments for R -> V.
+            for i=1:M
+                cU{i} = ...
+                    null( options.restrictions.linear_restrictions.Q(:,:,i) );
+                cV{i} = ...
+                    null( options.restrictions.linear_restrictions.R(:,:,i) );
+            end
         end
     end
 

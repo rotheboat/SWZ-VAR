@@ -1,0 +1,191 @@
+\documentclass [12pt]{article}
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage[round]{natbib}
+%\usepackage{hyperref}
+\usepackage{amsthm}
+\usepackage{pxfonts}
+\usepackage{graphics}
+\usepackage{lscape}
+\usepackage[round]{natbib}
+\usepackage{rotating}
+\usepackage{afterpage}
+\usepackage{mathrsfs}
+\usepackage{rolandboldmath}
+
+%Commands to format section and subsection
+\makeatletter
+\renewcommand{\section}{\@startsection
+  {section}%
+  {1}%
+  {0mm}%
+  {-\baselineskip}%
+  {0.5\baselineskip}%
+  {\large\centering\textsf}%
+}
+\renewcommand{\subsection}{\@startsection
+  {subsection}%
+  {2}%
+  {0mm}%
+  {\baselineskip}%
+  {0.2\baselineskip}%
+  {\noindent\large\textsf}%
+} \makeatother
+
+\renewcommand{\baselinestretch}{1.4}
+\setlength{\textwidth}{15cm} \setlength{\oddsidemargin}{0.5cm}
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{condition}{Condition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{result}{Result}
+
+
+
+\begin{document}
+
+    \title{GetVARLogLikelihood}
+
+    \renewcommand{\baselinestretch}{1}
+    \author{Roland Meeks \\ \texttt{roland.meeks@gmail.com}}
+
+    \maketitle
+
+    \section{Method description}
+    This method computes the log likelihood function for a Gaussian VAR.
+
+    \noindent\texttt{@return} [scalar] \textit{the log likelihood} \\
+    \noindent\texttt{@arguments} [matrix] \textit{data on dependent variables}; [matrix] \textit{data on independent variables}; [matrix] \textit{coefficients (arguments of the likelihood function)}
+
+    \section{Background and notation}
+    Let the $M$-dimensional vector $\by_t$ follow the VAR($p$) process:
+    \begin{equation} \label{eq:var_p}
+        \by_t' = \bc' + \by_{t-1}'\bB_1 + \dots + \by_{t-p}'\bB_p + \bu_t'
+    \end{equation}
+    where $\bc$ is an $M \times 1$-vector of constants and $\bu_t \sim N(\mathbf{0}, \bSigma)$, where $\bSigma$ is $M \times M$. The coefficient matrices $\bB$ are $M \times M$. Each equation (row) of the VAR has $K \coloneqq 1 + M \cdot p$ coefficients
+
+    To compute the likelihood, we use the Matlab method \texttt{mvnpdf}. It takes three inputs. The first is the $T \times M$ matrix of data $\bY$, stacked with variables in columns and observations in rows:
+    \begin{equation}
+        \bY = \left[
+                \begin{array}{cccc}
+                    y_{11} & y_{21} & \cdots & y_{M1} \\
+                    y_{12} & y_{22} & \cdots & y_{M2} \\
+                    \vdots & \vdots &        & \vdots \\
+                    y_{1t} & y_{2t} & \cdots & y_{Mt} \\
+                    \vdots & \vdots &        & \vdots \\
+                    y_{1T} & y_{2T} & \cdots & y_{MT}
+                \end{array}
+              \right]
+            = \left[
+                \begin{array}{c}
+                    \by_1' \\
+                    \by_2' \\
+                    \vdots \\
+                    \by_t' \\
+                    \vdots \\
+                    \by_T'
+                \end{array}
+              \right]
+    \end{equation}
+    Notice that the usual time series convention is followed on subscripting: first the variable index, then the time index.
+
+    Second is the matrix of conditional means. To compute this, stack the explanatory variables, i.e. the lagged dependent variables in \eqref{eq:var_p}, as follows. Let $\bx_t^{} = \left( \: \by_{t-1}' \: \by_{t-2}' \: \cdots \: \by_{t-p}' \:\: 1 \: \right)'$ be a $K \times 1$ vector; stacking all $T$ of these by time delivers the $T \times K$ matrix:
+    \begin{equation}
+        \bX = \left[
+                \begin{array}{c}
+                    \bx_1'  \\
+                    \bx_2'  \\
+                    \vdots \\
+                    \bx_t'  \\
+                    \vdots \\
+                    \bx_T'
+                \end{array}
+              \right]
+    \end{equation}
+    The $K \times M$ matrix of coefficients corresponding to the stacked system is $\bB = \left( \bB_1' \: \cdots \: \bB_p' \:\: \bc \right)'$. The stacked time representation of \eqref{eq:var_p} is thus:
+    \begin{equation}\label{eq:var_p_stack}
+        \bY = \bX \bB + \bU
+    \end{equation}
+    with the $T \times M$ matrix of disturbances $\vecop( \bU ) \sim N(\mathbf{0}_{MT}, \bSigma \otimes \bI_T )$ [?]. The conditional mean of \eqref{eq:var_p_stack} is seen to be $\bX \bB$, which is $T \times M$ (congruent with $\bY$).
+    
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Likelihood of a reduced form VAR}
+    The density of the observables in the reduced form VAR follows directly from \eqref{eq:var_p}.  The multivariate normal distribution for the observations on a single date is given by:
+    \begin{multline*}
+        p(\by_t|\bx_t) = (2\pi)^{-\frac{M}{2}} |\bSigma|^{-\frac{1}{2}} \\ \exp\left\{ (\by_t' - \bc' - \by_{t-1}'\bB_1 - \cdots \by_{t-p}'\bB_p)\bSigma^{-1}(\by_t' - \bc' - \by_{t-1}'\bB_1 - \cdots \by_{t-p}'\bB_p)' \right\}
+    \end{multline*}
+    or adopting the stacked notation:
+    \begin{equation}\label{eq:var_dens}
+        p(\by_t|\bx_t) = (2\pi)^{-\frac{M}{2}} |\bSigma|^{-\frac{1}{2}} \\ \exp\left\{ (\by_t' - \bx_t'\bB)\bSigma^{-1}(\by_t' - \bx_t'\bB)' \right\}
+    \end{equation}
+    which is the canonical form for a $N( \bx_t'\bB, \bSigma )$ variate.
+    
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Likelihood of a structural VAR}
+    This section shows how the distribution of the observables in the structural VAR depends upon the structural parameters in [XX].  Let $\bz_t' = \by_t' \bA$, write the structural representation of the VAR as:
+    \begin{equation}
+        \bz_t' = \bx_t'\bF + \bepsilon_t'
+    \end{equation}
+    where $\bepsilon_t \sim N( \mathbf{0}, \bI )$.  The idea here is that the model is set up in terms of the distribution of the \textit{linear combinations} of the observables, and the problem is to transform back to the distribution of the observables themselves.  The density function for $\bz_t$ is then seen to be\footnote{One could equally write the density of $\bz_t' \propto \exp\left\{ -\frac{1}{2} (\bz_t' - \bx_t'\bF)(\bz_t - \bF'\bx_t)' \right\}$, like in \eqref{eq:var_dens}. }:
+    \begin{equation}\label{eq:z_dens}
+        p( \bz_t | \bx_t ) \propto \exp\left\{ -\tfrac{1}{2} (\bz_t - \bF'\bx_t)'(\bz_t' - \bx_t'\bF) \right\}
+    \end{equation}
+    We now use a change of variables argument to derive $p(\by_t|\bx_t)$ \citep[Theorem 2.4.1]{anderson-book-84}.  The Jacobian of the one-to-one transformation above is simply mod$|\bA|$, the absolute value of the determinant of $\bA$.  Substituting out $\bz_t$ from \eqref{eq:z_dens}, we obtain:
+    \begin{equation}\label{eq:y_dens}
+        p( \by_t | \bx_t ) \propto \text{mod}|\bA|\exp\left\{ -\tfrac{1}{2} (\bA'\by_t - \bF'\bx_t)'(\bA'\by_t - \bF'\bx_t) \right\}.
+    \end{equation}
+    Some authors stop at that point \citep[e.g.][eq. 3]{sz-ier-98}.  But to use \texttt{mvnpdf} it's useful to go a little further, and put the density into a standard form.
+    
+    To see how to do this, use the results:
+    \begin{align*}
+        |\bA | = | \bA'| \qquad &\text{\citep[Lemma 13.2.1]{harville-97}} \\
+        |\bA \bA' | = |\bA | |\bA'| \qquad &\text{\citep[Theorem 13.3.4]{harville-97}}
+    \end{align*}
+    which imply that mod$|\bA|=\left({|\bA|^2}\right)^{\frac{1}{2}}=|\bA\bA'|^{\frac{1}{2}}$ in \eqref{eq:y_dens}.
+    Next, observe that the term in the exponent in \eqref{eq:y_dens} can be rewritten as:
+    \begin{equation*}
+        (\bA'\by_t - \bF'\bx_t)'(\by_t' \bA - \bx_t'\bF) = (\by_t' - \bx_t'\bF\bA^{-1})(\bA\bA')(\by_t - {\bA'}^{-1}\bF'\bx_t)
+    \end{equation*}
+    Let $\bSigma = {(\bA\bA')}^{-1}$, and noting that $|{(\bA\bA')}^{-1}|=1/|\bA\bA'|$ \citep[Theorem 13.3.7]{harville-97}, we observe that:
+    \begin{equation}\label{eq:y_dens_final}
+        p( \by_t | \bx_t ) \propto |\bSigma|^{-\frac{1}{2}}\exp\left\{ -\tfrac{1}{2} (\by_t - {\bA'}^{-1}\bF'\bx_t)'\bSigma^{-1}(\by_t - {\bA'}^{-1}\bF'\bx_t) \right\}
+    \end{equation}
+    is the density for the observables under the structural VAR process.  The standard form of the expression translates easily into the form that Matlab expects.  For the purposes of section \ref{s:matlab}, set:
+
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Computing the likelihood using \texttt{mvnpdf}}\label{s:matlab}
+    With the assumed constant covariance matrix, a call to \texttt{mvnpdf}( $\bY$, $\bX \bB$, $\bSigma$ ) returns the $T \times 1$-dimensional vector
+    \begin{equation}
+        p( \bY ) =
+        \left[
+        \begin{array}{c}
+            p(\by_1'|\bX_1) \\
+            p(\by_2'|\bX_2) \\
+            \vdots             \\
+            p(\by_t'|\bX_t) \\
+            \vdots             \\
+            p(\by_T'|\bX_T)
+        \end{array}
+        \right]
+    \end{equation}
+    which is the multivariate normal density evaluated at the data points $\by_1, \dots, \by_T$. The joint density of all the observations is the product of the rows of $p(\bY)$, because when the DGP is a VAR(p), conditioning on lags of $\by$ greater than $p$ is irrelevant in the usual sequential factorization
+    \begin{multline}
+        p( \by_1, \by_2, \dots, \by_t, \dots, \by_T ) = \\ p(\by_1) \, p(\by_2|\by_1) \cdots p( \by_t | \by_{t-1},\dots,\by_2,\by_1 ) \cdots p( \by_T | \by_{T-1},\dots,\by_t,\dots,\by_2,\by_1) \\ = p(\by_1) \, p(\by_2|\by_1) \cdots p( \by_t | \by_{t-1},\dots,\by_{t-p} ) \cdots p( \by_T | \by_{T-1},\dots,\by_{T-p})
+    \end{multline}
+    where I've done slight violence to index notation to include `pre-sample' observations in the joint density as observations 1 through $p$.
+
+    The log likelihood associated with the observed data $\bY$, seen as a function of the parameters is then the scalar
+    \begin{equation}
+        \ln\mathscr{L}(\bB; \bY) = \iota_T' \ln{p( \bY )}
+    \end{equation}
+    where the logarithm applies elementwise, and where pre-multiplication by the unit column vector $\iota_T$ effects the sum.
+    
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\bibliographystyle{econ}
+\bibliography{C:/dropbox/tex/refs}
+    \bigskip\noindent{END}
+\end{document}

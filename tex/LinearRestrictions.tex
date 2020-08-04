@@ -1,0 +1,253 @@
+\documentclass [12pt]{article}
+
+\usepackage{afterpage}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{enumerate}
+\usepackage{graphics}
+\usepackage{lscape}
+\usepackage{rotating}
+\usepackage{lscape}
+\usepackage{mathrsfs}
+\usepackage[numbered,framed,useliterate,autolinebreaks]{mcode}
+\usepackage{pxfonts}
+\usepackage[round]{natbib}
+\usepackage{rolandboldmath}
+
+\newtheorem{example}{Example}
+\newtheorem{theorem}{Theorem}
+\newcommand{\rank}{\mathrm{rank}}
+
+%Commands to format section and subsection
+\makeatletter
+\renewcommand{\section}{\@startsection
+  {section}%
+  {1}%
+  {0mm}%
+  {-\baselineskip}%
+  {0.5\baselineskip}%
+  {\large\centering\textsf}%
+}
+\renewcommand{\subsection}{\@startsection
+  {subsection}%
+  {2}%
+  {0mm}%
+  {\baselineskip}%
+  {0.2\baselineskip}%
+  {\noindent\large\textsf}%
+} \makeatother
+
+\renewcommand{\baselinestretch}{1.4}
+\setlength{\textwidth}{15cm} \setlength{\oddsidemargin}{0.5cm}
+
+
+\begin{document}
+
+    \title{Linear Restrictions on Bayesian VARs}
+
+    \renewcommand{\baselinestretch}{1}
+    \author{Roland Meeks \\ \texttt{roland.meeks@gmail.com}}
+
+    \maketitle
+
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Introduction}
+    This document sets out how to impose a set of linear restrictions on a Bayesian VAR. The baseline model is that set out in \citet{wz-jedc-03}.
+
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Background and notation}
+    The baseline VAR is:
+    \begin{equation}\label{eq:baseline_var}
+        \underset{(1 \times m)}{\by_t^\prime} \underset{(m \times m)}{\bA_0 \phantom{y}} = \sum_{\ell=1}^p \, \underset{(1 \times m)}{\by_{t-\ell}^\prime} \underset{(m \times m)}{\bA_\ell \phantom{y}} + \underset{(1 \times n)}{\bz_t^\prime} \underset{(n \times m)}{\bD \phantom{y}} + \underset{(1 \times m)}{\varepsilon_t^\prime}, \qquad \varepsilon_t \sim \mathcal{N}( \mathbf{0}, \bI_m )
+    \end{equation}
+    where $\by$ is the vector of endogenous variables, $\bz$ is a vector of exogenous/deterministic variables, and $\varepsilon$ is a vector of disturbances. The coefficient matrices are $\bA_0$, $\bA_\ell$, and $\bD$. Notice that the $i$th column of these matrices represent the coefficients in the $i$th equation of the system. Where a constant is present, we will take it to occupy the final position in the $\bz$ vector.
+
+    Stacking together the lags of $\by$ and the exogenous variables $\bz$ produces the new vector:
+    \begin{equation*}
+        \underset{(k \times 1)}{\bx_t} = \begin{bmatrix}
+                             \by_{t-1} \\
+                             \vdots \\
+                             \by_{t-\ell} \\
+                             \bz_t
+                           \end{bmatrix}
+    \end{equation*}
+    which allows us to write \eqref{eq:baseline_var} in the more compact form:
+    \begin{equation}\label{eq:compact_var}
+        \underset{(1 \times n)}{\by_t^\prime} \underset{(n \times n)}{\bA_0 \phantom{y}} = \underset{(1 \times k)}{\bx_t^\prime} \underset{(k \times n)}{\bF \phantom{|}} + \underset{(1 \times n)}{\varepsilon_t^\prime}
+    \end{equation}
+    We note that the number of RHS variables in this equation $k = p \, m + n$, the number of lags of $\by$ times the number of endogenous variables, plus the number of exogenous/deterministic variables $\bz$.
+
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Restrictions}
+    Restrictions must be imposed on the structural VAR described by \eqref{eq:compact_var} in order for it to be identified (see following section). Researchers may also seek to impose over-identifying restrictions on the model. For $0 \le i \le m$, let $\ba_i$ be the $i$th column of $\bA_0$, let $\bff_i$ be the $i$th column of $\bF$. Linear restrictions are summarized as:
+    \begin{align}
+        \underset{(m \times m)}{\bQ_i} \underset{(m \times 1)}{\ba_i} = 0_{(m \times 1)} \qquad \text{and} \qquad \rank(\bQ_i) = q_i \label{eq:restrictionsA} \\
+        \underset{(k \times k)}{\bR_i} \underset{(k \times 1)}{\bff_i} = 0_{(k \times 1)} \qquad \text{and} \qquad \rank(\bR_i) = r_i \label{eq:restrictionsF}
+    \end{align}
+    The number of restrictions on $\ba_i$, the contemporaneous matrix in $i$th equation, is $q_i$. The number of restrictions on $\bff_i$ is $r_i$. The total number of restrictions on $\bA_0$ is $q = \sum q_i$, and on $\bF$ is $r = \sum r_i$.
+    \bigskip
+
+    \begin{example}{}
+    Consider the case $m = 2$, with $\bQ_2 = 0$ and $\bQ_1$ as in the following:
+    \begin{equation*}
+        \begin{bmatrix}
+          0 & 1 \\
+          0 & 0
+        \end{bmatrix}
+        \begin{bmatrix}
+          a_{11} \\
+          a_{21}
+        \end{bmatrix}
+        =
+        \begin{bmatrix}
+          0 \\
+          0
+        \end{bmatrix}
+    \end{equation*}
+    which implies $q_1 = 1, q_2 = 0$ and $a_{21} = 0$, and:
+    \begin{equation*}
+        \bA_0 = \begin{bmatrix}
+                  a_{11} & a_{12} \\
+                  0 & a_{22}
+                \end{bmatrix}
+    \end{equation*}
+    which is a recursive structure.
+    \end{example}
+
+    \begin{example}{}
+        Consider the case $m = 3$, and the following restriction on the 1st equation:
+    \begin{equation*}
+        \begin{bmatrix}
+          0 & 0 & 0 \\
+          0 & 1 & 0 \\
+          1 & 0 & -1
+        \end{bmatrix}
+        \begin{bmatrix}
+          a_{11} \\
+          a_{21} \\
+          a_{31}
+        \end{bmatrix}
+        =
+        \begin{bmatrix}
+          0 \\
+          0 \\
+          0
+        \end{bmatrix}
+    \end{equation*}
+    Now $q_1 = 2$, and the restriction is $a_{21}=0$ and $a_{11} = a_{31}$. 
+    \end{example} \noindent
+    It is worth noting at this point that restrictions such as $a_{1i} = a_{2j}$ (i.e. cross-structural equation restrictions) are not permitted.\footnote{The structural restrictions in \eqref{eq:restrictionsA}-\eqref{eq:restrictionsF} can give rise to cross-reduced form equation restrictions, however.}
+    
+    To avoid later confusion, let us take the matrix $\bA_0$ to represent the \textit{restricted} version of some unrestricted impact matrix (i.e. one with $m^2$ free coefficients), such that:
+    \begin{equation*}
+        \bA_0 \coloneqq [ \bQ_1 \ba^u_1, \dots, \bQ_m \ba_m^u ]
+    \end{equation*}
+    and similarly for $\bF$.
+
+    % ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \section{Identification}
+    In the foregoing discussion, nothing was said about the validity of the restrictions described by \eqref{eq:restrictionsA}-\eqref{eq:restrictionsF}. A moment's reflection makes it plain that not all restrictions are sensible--for example, it is easy to think of degenerate restrictions (those for which no non-singular $\bA_+$ matrix exists). But ensuring all parameters are identified is not always straightforward.
+    
+    A sufficient condition for global identification is provided by \citet{rub-wag-zha-restud10}.\footnote{Unfortunately there is no consistency in notational conventions between various papers in this literature, so I maintain the conventions set out above while noting these are different from the cited paper.} Let $f(\cdot)$ denote a transformation of the structural parameter space $(\bA_0, \bF)$ into the set of $h \times m$ matrices. This function differs depending on the nature of the restrictions being imposed on the model, but for linear restrictions it takes the simple form:
+    \begin{equation*}
+        f( \bA_0, \bF ) = \bA_0 \qquad \text{if} \quad q > 0
+    \end{equation*}
+    such that $h=m$, or 
+    \begin{equation*}
+        f( \bA_0, \bF ) = \begin{bmatrix} \bA_0 \\ \bF \end{bmatrix} \qquad \text{if} \quad q, r > 0
+    \end{equation*}
+    such that $h=m$ or $h=m+k$.
+    
+    Now define the matrix of `stacked' restrictions:
+    \begin{equation*}
+        \underset{(h \times h)}{\bL_i} = \begin{bmatrix} \underset{(m \times m)}{\bQ_i} & \mathbf{0}_{m \times k} \\ \mathbf{0}_{k \times m} & \underset{(k \times k)}{\bR_i} \end{bmatrix}
+    \end{equation*}
+    that is, the matrix for which:
+    \begin{equation}\label{eq:rwz4}
+        \underset{(h \times h)}{\bL_i} \underset{(h \times m)}{f( \bA_0, \bF )} \underset{(m \times 1)}{\be_i} = \mathbf{0}_{m \times 1}, \quad 1 \le i \le m
+    \end{equation}
+    where $\be_i$ is the $i$th column of the $m$-dimensional identity matrix $\bI_m$. The rank of $\bL_i$ is denoted $l_i$. In the case of linear restrictions, notice that the role of $\be_i$ is simply to pick out the $i$th column (structural equation) of the system. We adopt the convention that the number of restrictions should not increase with $i$, that is, $l_1 \ge l_2 \ge \dots \ge l_m$. This wlog assumption results in a constructive approach to checking later conditions.
+    \bigskip
+    
+    \begin{example}{}
+        Suppose we have linear restrictions on $\bA^u_0$ alone, $m=3$, and we have in mind a recursive scheme. Then:
+        \begin{equation*}
+            \bA_0 = \begin{bmatrix}
+                      a_{11} & a_{12} & a_{13} \\
+                      0 & a_{22} & a_{23} \\
+                      0 & 0 & a_{33}
+                    \end{bmatrix}
+        \end{equation*}
+        and to achieve the needed restrictions on $\bA^u_0$ using \eqref{eq:rwz4} we can write:
+        \begin{align*}
+           \bL_1 f( \bA_0, \bF ) \be_1 = \bQ_1 \bA^u_0 \be_1 &= \begin{bmatrix} 0 & 1 & 0 \\ 0 & 0 & 1 \\ 0 & 0 & 0 \end{bmatrix} \begin{bmatrix} a_{11} \\ a^0_{21} \\ a^0_{31} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} \\
+           \bL_2 f( \bA_0, \bF ) \be_2 = \bQ_2 \bA^u_0 \be_2 &= \begin{bmatrix} 0 & 0 & 1 \\ 0 & 0 & 0 \\ 0 & 0 & 0 \end{bmatrix} \begin{bmatrix} a^0_{12} \\ a^0_{22} \\ a^0_{32} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix} \\
+           \bL_3 f( \bA_0, \bF ) \be_3 =  \bQ_3 \bA^u_0 \be_3 &= \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & 0 \end{bmatrix} \begin{bmatrix} a^0_{13} \\ a^0_{23} \\ a^0_{33} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}
+        \end{align*}
+        Think of the rows of $\bL_i$ as representing individual restrictions (the first, second, ...  ) on a particular equation; and the columns representing the variables ($y_1$, $y_2$, ... ). The number of non-zero \textit{rows} in each $\bL_i$ gives the number of restrictions, so we can see that the above example obeys the convention that the number of restrictions does not increase with $i$.
+    \end{example}
+    
+    \citet{rub-wag-zha-restud10} state their sufficient condition for global identification in terms of the following matrix:
+    \begin{equation}\label{eq:rwzT1}
+        \underset{(h+j \times m)}{\bM_j( \bX )} = 
+            \begin{bmatrix}
+              \underset{(h \times h)}{\bL_j} \underset{(h \times m)}{\bX\phantom{_j}} \\
+              \begin{bmatrix}
+                \bI_j & \mathbf{0}_{j \times (m-j)}
+              \end{bmatrix}
+            \end{bmatrix}
+    \end{equation}
+    for any matrix $\bX$.
+    
+    \begin{theorem}{Sufficient condition for global identification} \label{thm:rwz}
+      If the restricted parameters $(\bA_0, \bF)$ satisfy certain regularity conditions, and $\bM_j( f( \bA_0, \bF ) )$ is of rank $m$ for all $1 \le j \le m$, then the SVAR is globally identified at the parameter point $(\bA_0, \bF)$.
+    \end{theorem}
+
+    To stress, the coefficient matrices that appear in this theorem are those with restrictions imposed. Intuitively, the terms in $\bL_i f( \bA_0, \bF )$ that appear in the theorem are applying the restrictions that appear in equation $i$ on \textit{all} the equations of the system. We can now apply this theorem to our example.
+    
+    \setcounter{example}{2}
+    \begin{example}{\textbf{(Ctd.)}}
+        We can now construct the $\bM$ matrices needed to check identification. Letting $\times$ denote a non-zero entry, we have:
+        \begin{align*}
+           \bM_1( f( \bA_0, \bF ) ) &= \begin{bmatrix} 0 & \times & \times \\ 0 & 0 & \times \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \end{bmatrix}
+           &
+           \bM_2 f( \bA_0, \bF ) &= \begin{bmatrix} 0 & 0 & \times \\ 0 & 0 & 0 \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \\ 0 & 1 & 0 \end{bmatrix}
+           &
+           \bM_3 f( \bA_0, \bF ) &= \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix} 
+        \end{align*}
+        It is easy to verify by simple inspection that $\rank( \bM_1 ) = \rank( \bM_2 ) = \rank( \bM_3 ) = 3$. Thus the recursive model satisfies the sufficient condition for global identification.
+    \end{example}
+    
+    \setcounter{example}{1}    
+    \begin{example}{\textbf{(Ctd.)}}
+        In this example, the first equation has a restriction that two coefficients are equal. Let us assume that the other equations have triangular restrictions, such that $q_1 = 2$, $q_2 = 1$, $q_3 = 0$ to give a total of $3 = m(m-1)/2$ restrictions. Then:
+        \begin{equation*}
+            \bA_0 = \begin{bmatrix}
+                      a_{31} & a_{12} & a_{13} \\
+                      0 & a_{22} & a_{23} \\
+                      a_{31} & 0 & a_{33}
+                    \end{bmatrix}
+        \end{equation*}
+        
+        \begin{align*}
+           \bM_1( f( \bA_0, \bF ) ) &= \begin{bmatrix} 0 & \times & \times \\ 0 & \times & \times \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \end{bmatrix}
+           &
+           \bM_2 f( \bA_0, \bF ) &= \begin{bmatrix} \times & 0 & \times \\ 0 & 0 & 0 \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \\ 0 & 1 & 0 \end{bmatrix}
+           &
+           \bM_3 f( \bA_0, \bF ) &= \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & 0 \\ \hline 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \end{bmatrix}
+        \end{align*}
+        Again, the rank condition is satisfied.
+    \end{example}
+    
+    
+    For computational purposes note that Theorem \ref{thm:rwz} holds almost surely, that is, except on measure zero sub-sets of the parameter space. Therefore, to check the rank condition it will suffice to take a random draw from the parameter space and check the rank condition using that draw. It could be that some obvious choices for the parameters--for example, all 1's--are in the measure zero sub-space that is outside of the globally identified set.
+    
+
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    \bibliographystyle{plainnat}
+    \bibliography{C:/Users/Home/Dropbox/research/tex/refs}
+
+    \bigskip\noindent{END}
+
+\end{document}
