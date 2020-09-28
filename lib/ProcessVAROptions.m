@@ -1,4 +1,4 @@
-function [mY, mZ] = ProcessVAROptions( Yraw, options, Ynames, shock_to )
+function [mY, mZ] = ProcessVAROptions( data_table, options, Ynames, shock_to )
 % Checks that the options set for the VAR make sense, that the necessary
 % ones appear, and that the variables selected for estimation exist in the
 % database. Returns the variables selected for estimation in the order
@@ -9,15 +9,19 @@ function [mY, mZ] = ProcessVAROptions( Yraw, options, Ynames, shock_to )
     assert( ( 0 == options.constant || 1 == options.constant ), ...
         'Option "constant" must be set to 0 (exclude) or 1 (include)' );
 
+    % The height of the data table is the number of observations
+    T = height( data_table );
+    
     % M is the dimension of the VAR
     M = length(options.names);
+    mY = nan( T, M );
 
-    % The columns of the dataset in which the variables in names fall is:
-    index_selected_data = zeros(1,M);
+    % Loop over the variables in names (the endogenous variables to be
+    % modeled in the VAR)
     for i = 1:M
         % endogenous variables
         if ismember( options.names{i}, Ynames )
-            index_selected_data(i) = find( strcmpi( options.names{i}, Ynames ) );
+            mY(:,i) = data_table.( options.names{i} );
         else
             error( 'Data:UserVariableList', ...
                 cat(2, 'Selected variable ', options.names{i}, ...
@@ -27,11 +31,13 @@ function [mY, mZ] = ProcessVAROptions( Yraw, options, Ynames, shock_to )
 
     % K is the number of exogenous variables (not including the constant)
     K = length( options.exo_names );
-
-    index_selected_exo = zeros(1,K);
+    mZ = nan( T, K );
+    
+    % Loop over the variables in exo_names (the exogenous variables to be 
+    % included in the VAR, aside from the constant) (may be empty)
     for i = 1:K
         if ismember( options.exo_names{i}, Ynames )
-            index_selected_exo(i) = find( strcmpi( options.exo_names{i}, Ynames ) );
+            mZ(:,i) = data_table.( options.exo_names{i} );
         else
             error( 'Data:UserExoVariableList', ...
                 'Selected variable not in data set. Check "names" list.' );
@@ -47,11 +53,6 @@ function [mY, mZ] = ProcessVAROptions( Yraw, options, Ynames, shock_to )
     end
     % End process shock_to option
 
-    
-    % The exogenous variables are retained in the Zraw matrix.
-    mZ = Yraw( :, index_selected_exo );
-    % only the selected data is retained in the Yraw matrix.
-    mY = Yraw( :, index_selected_data );
     
     fprintf( '\n%s\n\n', ['VAR order p = ' num2str(options.nlags) ...
             '; constant ' constant_names{options.constant+1} ] );

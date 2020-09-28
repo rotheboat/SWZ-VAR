@@ -1,15 +1,22 @@
-function [Yraw, Ynames, cal] = GetVARData( data_dir, data_file, data_tab )
+function [data_table, Ynames, cal] = GetVARData( data_dir, data_file, data_tab )
+% Task to read data in from an Excel file, return the data table along with
+% the variable names in the file (Ynames) and a DateHandler object for 
+% later data manipulation.
 
-% BUGBUG catch errors
-[num, text, ~] = xlsread( [data_dir data_file], data_tab );
+% Use of xlsread() is deprecated, so now uses readtable()
+data_table = readtable( [data_dir data_file], 'Sheet', data_tab );
 
-% The variables that are to be modelled in the VAR are denoted names. All
-% named variables must match exactly entries in Ynames for the selection to
-% work. The usrdifflev variable determines whether the priors are centered
-% persistent (1) or non-persistent (0) coeff. values.
-Yraw = num;
-Ynames = text(1,2:end); % note: first 'name' is 'qdate's; ignore
-x_date_str = text(2:end,1); % Here we have formatted dates for plotting
+% The column headings are a property of the data table
+Ynames = data_table.Properties.VariableNames;
+
+% We are looking for a cell array of strings giving the dates, in a column
+% named "date". If that name doesn't exist, assume it's the first column
+try
+    x_date_str = data_table.date;
+catch
+    warning( 'Spreadsheet should contain a column named "date".' );
+    x_date_str = data_table(:,1);
+end
 
 % In any case, name the data you load 'Yraw', in order to avoid changing the
 % rest of the code. Note that 'Yraw' is a matrix with T rows by M columns,
