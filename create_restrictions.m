@@ -1,5 +1,5 @@
 % Create restriction matrices
-options.restrictions = cell(1,2);
+options.restrictions.zero_restrictions = cell(1,2);
 
 M = numel(options.names);
 
@@ -39,7 +39,7 @@ mRF( options.nlags*M+6, 1:2 ) = 1;
 % % 'TREND' (if present)
 % mRF( options.nlags*M+7, 3 ) = 1;
 
-options.restrictions{2} = mRF;
+options.restrictions.zero_restrictions{2} = mRF;
 
 % A matrix 
 mRA = zeros(3,3);
@@ -52,4 +52,4 @@ mRA(2,2) = 1;
 % Credit demand
 mRA(2,3) = 1;
 mRA(3,3) = 1;
-options.restrictions{1} = mRA;
+options.restrictions.zero_restrictions{1} = mRA;

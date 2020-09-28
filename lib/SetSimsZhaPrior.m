@@ -516,6 +516,9 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
 % My standard approach is that mRestrict is a 1x2 cell array.
 
     [~, M, K, ~, ~, ~] = GetVARDimensions( mY, mX, options );
+    
+    id_fail_msg = cat( 2, 'Conditions for global identification', ...
+                          ' are not satisfied! Check model restrictions.');
 
     % Default "restrictions": 
     % * A is normalized to be triangular; F is
@@ -528,6 +531,9 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
     % * For mF, the default is no restrictions
     mycell = cell(1,M); 
     cV = cellfun(@(n)eye(K,K),mycell,'UniformOutput', false);
+    
+    % Under the defaults, the model is globally identified
+    priorparams.isidentified = true;
 
     % Check if any restrictions are present (if not the defaults are used).
     % There can never be "no restrictions".
@@ -551,13 +557,11 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
             % If there are some zero restrictions, process them
             if priorparams.is_restricted
                 
-                [cU, cV] = processZeroRestrictions( ...
+                [cU, cV, priorparams.isidentified] = ...
+                    processZeroRestrictions( ...
                             options.restrictions.zero_restrictions, ...
                                 M, K, cU, cV );
                 
-                % Signal that restrictions are present
-                fprintf( '\nApplying parameter restrictions...' );
-
             end
         end
 
@@ -574,13 +578,46 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
             % to equation numbers with ordering exactly as in
             % options.names; same comments for R -> V.
             for i=1:M
-                cU{i} = ...
-                    null( options.restrictions.linear_restrictions.Q(:,:,i) );
-                cV{i} = ...
-                    null( options.restrictions.linear_restrictions.R(:,:,i) );
-            end
+                
+                % Restrictions on A
+                if isfield( options.restrictions.linear_restrictions, 'Q' )
+                    cU{i} = ...
+                        null( options.restrictions.linear_restrictions.Q(:,:,i) );
+                else
+                    % Assume A is upper triangular, so R is lower
+                    % triangular with each successive equation embodying
+                    % fewer restrictions (fewer non-zero rows).
+                    options.restrictions.linear_restrictions.Q(:,:,i) = ...
+                        tril( ones(M,M), -i );
+                end
+                
+                % Restrictions on F
+                if isfield( options.restrictions.linear_restrictions, 'R' )
+                    cV{i} = ...
+                        null( options.restrictions.linear_restrictions.R(:,:,i) );
+                else
+                    % If R is not present, assume it is unrestricted
+                    options.restrictions.linear_restrictions.R(:,:,i) = ...
+                        zeros( K, K );
+                end 
+            end % end loop over equations
+            
+            priorparams.isidentified = CheckGlobalIdentification( ...
+                options.restrictions.linear_restrictions.Q, ...
+                options.restrictions.linear_restrictions.R ...
+                );
+            
+        end % end if linear_restrictions
+        
+         % Signal that restrictions are present
+        if priorparams.isidentified
+            fprintf( cat(2, '\n*** Model is globally identified ***', ...
+                '\nApplying parameter restrictions...' ) );
+        else
+            warning( id_fail_msg );
         end
-    end
+        
+    end % end if restrictions
 
     priorparams.cU = cU;
     priorparams.cV = cV;
@@ -589,7 +626,8 @@ end
 
 
 
-function [cU, cV] = processZeroRestrictions( mRestrict, M, K, cU, cV )
+function [cU, cV, isidentified] = ...
+                    processZeroRestrictions( mRestrict, M, K, cU, cV )
 % This method processes the restrictions summarized in mRestrict, a cell
 % array of restriction matrices.  At present, only zero restrictions are
 % handled.  There is a simple pattern-matching approach whereby:
@@ -611,12 +649,15 @@ function [cU, cV] = processZeroRestrictions( mRestrict, M, K, cU, cV )
         for i = 1:M
             % The more obvious way to do create Q produces a logical matrix
             % that needs to be cast to an uint16 before passing to svd
-            mQ = ones( M, 1 );
-            mQ( logical( A_zeros(:,i) ) ) = 0;
-            mQ = diag( mQ );
-            cU{i} = null( mQ );
+            temp = ones( M, 1 );
+            temp( logical( A_zeros(:,i) ) ) = 0;
+            mQ(:,:,i) = diag( temp );
+            cU{i} = null( mQ(:,:,i) );
         end
 
+    else
+        % There are no zero restrictions on any equation in A
+        mQ = zeros( M, M, M );
     end
 
     if ~isempty( mRestrict{2} )
@@ -627,14 +668,18 @@ function [cU, cV] = processZeroRestrictions( mRestrict, M, K, cU, cV )
         cV = cell( 1, M );
 
         for i = 1:M
-            mR = ones( K, 1 );
-            mR( logical( F_zeros(:,i) ) ) = 0;
-            mR = diag( mR );
-            cV{i} = null( mR );
+            temp = ones( K, 1 );
+            temp( logical( F_zeros(:,i) ) ) = 0;
+            mR(:,:,i) = diag( temp );
+            cV{i} = null( mR(:,:,i) );
         end
 
+    else
+        % There are no zero restrictions on any equation in F
+        mR = zeros( K, K, M );
     end
     
+    isidentified = CheckGlobalIdentification( mQ, mR );
 % end function
 end
 
