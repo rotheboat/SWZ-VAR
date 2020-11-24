@@ -128,5 +128,13 @@ if (0 < options.constant)
     X1 = cat(2, X1, ones(Tstar,1)); % #BUGBUG constant moved *after* lags
 end
 
+%% Check the selected data contains no nan values
+% Note that it is possible that some exogenous variables have nan values
+% that are truncated out of the sample once the Y data has been manipulated
+% to create lags. This is not a bug.
+err_msg = 'Data::Selected variables/data sample must not contain nan values.';
+assert( all( all( ~isnan( X1 ) ) ), err_msg );
+assert( all( all( ~isnan( Y1 ) ) ), err_msg );
+
 end
 % end function

@@ -3,6 +3,16 @@ function [mY, mZ] = ProcessVAROptions( data_table, options, Ynames, shock_to )
 % ones appear, and that the variables selected for estimation exist in the
 % database. Returns the variables selected for estimation in the order
 % present in options.names, options.exo_names, as matrices of length T.
+% 
+% @args
+%   data_table : a table containing data read from spreadsheet
+%   options : a struct of BVAR settings
+%   Ynames : a (1 x #variables in spreadsheet) cell array of strings
+%   shock_to : a (1 x #shocks for IRFS) cell array of strings
+%
+% @return
+%   mY : a T x M matrix of endogenous variables
+%   mZ : a T x K matrix of exogenous variables
 
     constant_names = {'excluded', 'included'};
     % Code ....................................................................
