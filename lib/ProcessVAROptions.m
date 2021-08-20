@@ -39,8 +39,13 @@ function [mY, mZ] = ProcessVAROptions( data_table, options, Ynames, shock_to )
         end
     end
 
-    % K is the number of exogenous variables (not including the constant)
-    K = length( options.exo_names );
+    % K is the number of exogenous variables (not including the constant).
+    % It may be that there are no exogenous variables.
+    if isfield( options, 'exo_names' )
+        K = length( options.exo_names );
+    else
+        K = 0;
+    end
     mZ = nan( T, K );
     
     % Loop over the variables in exo_names (the exogenous variables to be 
@@ -50,7 +55,8 @@ function [mY, mZ] = ProcessVAROptions( data_table, options, Ynames, shock_to )
             mZ(:,i) = data_table.( options.exo_names{i} );
         else
             error( 'Data:UserExoVariableList', ...
-                'Selected variable not in data set. Check "names" list.' );
+                'Selected variable "%s" not in data set. Check "names" list.', ...
+                options.exo_names{i} );
         end
     end
 

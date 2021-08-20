@@ -572,6 +572,20 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
         % However they must be validated here
         if isfield( options.restrictions, 'linear_restrictions' )
             
+            % Did the user set a Q matrix of linear restrictions?
+            if isfield( options.restrictions.linear_restrictions, 'Q' )
+                flag_user_restrictions_Q = true;
+            else
+                flag_user_restrictions_Q = false;
+            end
+            
+            % Did the user set an F matrix of linear restrictions?
+            if isfield( options.restrictions.linear_restrictions, 'R' )
+                flag_user_restrictions_R = true;
+            else
+                flag_user_restrictions_R = false;
+            end
+            
             % For each equation, retrieve the Q matrix from the options
             % structure, and store the nullity of Q in U. We expect Q to be
             % a 3-D numerical array, with the third dimension corresponing
@@ -579,8 +593,8 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
             % options.names; same comments for R -> V.
             for i=1:M
                 
-                % Restrictions on A
-                if isfield( options.restrictions.linear_restrictions, 'Q' )
+                % Restrictions on A (flag user supplied)
+                if flag_user_restrictions_Q
                     cU{i} = ...
                         null( options.restrictions.linear_restrictions.Q(:,:,i) );
                 else
@@ -591,8 +605,8 @@ function priorparams = SetRestrictions( mY, mX, priorparams, options )
                         tril( ones(M,M), -i );
                 end
                 
-                % Restrictions on F
-                if isfield( options.restrictions.linear_restrictions, 'R' )
+                % Restrictions on F (flag user supplied)
+                if flag_user_restrictions_R
                     cV{i} = ...
                         null( options.restrictions.linear_restrictions.R(:,:,i) );
                 else

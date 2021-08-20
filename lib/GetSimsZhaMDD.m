@@ -13,6 +13,11 @@ function [ log10mdd ] = GetSimsZhaMDD( mY, mX, szprior, postest, options, vararg
     if 2 == nVarargs
         Astar = varargin{1};
         Fstar = varargin{2};
+        
+        % Take care of the case that the model is a univariate AR(1)
+        if eq( 1, size( Fstar, 1 ) )
+            Fstar = Fstar';
+        end
     end
     
     % Step 0.2 Set parameters...

@@ -36,8 +36,8 @@ function [params, maxlik, mA0, mA1, mSigma, exitflag, minoutput] = ...
 % @returns:
 %
 % @requires:
-% minFunc package, available at:
-% http://www.di.ens.fr/~mschmidt/Software/minFunc.html
+% minFunc package by Mark Schmidt, available at:
+% https://www.cs.ubc.ca/~schmidtm/Software/minFunc.html
 % If using minFunc for the first time, be sure to run mexAll.m before
 % running this code.
 %
